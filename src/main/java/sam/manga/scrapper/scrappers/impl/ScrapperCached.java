@@ -16,20 +16,27 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiPredicate;
+import java.util.logging.Logger;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-import sam.manga.scrapper.ChapterScrapListener;
-import sam.manga.scrapper.PageScrapListener;
+import sam.console.ANSI;
+import sam.logging.MyLoggerFactory;
+import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedManga;
+import sam.manga.scrapper.ScrappedPage;
 import sam.manga.scrapper.Scrapper;
+import sam.manga.scrapper.ScrapperException;
+import sam.manga.scrapper.ScrapperType;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.jsoup.DefaultJsoupFactory;
 import sam.manga.scrapper.jsoup.JsoupFactory;
 import sam.myutils.System2;
 
 public class ScrapperCached implements JsoupFactory, Scrapper  {
+	private static final Logger LOGGER = MyLoggerFactory.logger(ScrapperCached.class);
+
 	public final File cacheDir = Optional.ofNullable(lookup("SAMROCK_CACHE_DIR")).map(File::new).orElseGet(() -> new File(TEMP_DIR.toFile(), "samrock-cache"));
 	public final File htmlCache = new File(cacheDir, "html");
 	public final String baseUrl;
@@ -41,12 +48,18 @@ public class ScrapperCached implements JsoupFactory, Scrapper  {
 	private final Scrapper scrapper;
 	private final ScrapperType scrapperType;
 
-	public static ScrapperCached createDefaultInstance() throws InstantiationException, IllegalAccessException, IOException {
-		String type = System2.lookup("SCRAPPER_TYPE");
-		if(type == null)
+	public static ScrapperCached createDefaultInstance() throws ScrapperException, IOException {
+		String key = "SCRAPPER_TYPE";
+		String type = System2.lookup(key);
+		if(type == null) {
+			LOGGER.info(ANSI.yellow(key)+"="+ScrapperType.MANGAHERE);
 			return new ScrapperCached(ScrapperType.MANGAHERE.base_url, ScrapperType.MANGAHERE);
+		}
+		
 		ScrapperType st = ScrapperType.valueOf(type.toUpperCase());
+		LOGGER.info(ANSI.yellow(key)+"="+st);
 		String base_url = System2.lookup("SCRAPPER_BASE_URL");
+		
 		if(base_url != null)
 			return new ScrapperCached(base_url, st);
 		
@@ -60,10 +73,14 @@ public class ScrapperCached implements JsoupFactory, Scrapper  {
 	public void setCacheFilter(BiPredicate<String, UrlType> cacheFilter) {
 		this.cacheFilter = cacheFilter;
 	}
-	public ScrapperCached(String baseUrl, ScrapperType scrapperType) throws IOException, InstantiationException, IllegalAccessException {
+	public ScrapperCached(String baseUrl, ScrapperType scrapperType) throws IOException, ScrapperException {
 		this.scrapperType = scrapperType;
 		this.baseUrl = baseUrl;
-		this.scrapper = scrapperType.cls.newInstance();
+		try {
+			this.scrapper = scrapperType.cls.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new ScrapperException(e);
+		}
 		this.scrapper.setJsoupFactory(this);
 	}
 	public String getBaseUrl() {  return baseUrl; }
@@ -118,19 +135,19 @@ public class ScrapperCached implements JsoupFactory, Scrapper  {
 
 	}
 	@Override
-	public ScrappedManga scrapManga(String mangaUrl) throws Exception {
+	public ScrappedManga scrapManga(String mangaUrl) throws ScrapperException, IOException {
 		return scrapper.scrapManga(mangaUrl);
 	}
 	@Override
-	public void scrapChapters(ScrappedManga manga, ChapterScrapListener listener) throws Exception {
-		scrapper.scrapChapters(manga, listener);
+	public ScrappedChapter[] scrapChapters(ScrappedManga manga) throws ScrapperException, IOException {
+		return scrapper.scrapChapters(manga);
 	}
 	@Override
-	public void scrapPages(String chapterUrl, PageScrapListener listener) throws Exception {
-		scrapper.scrapPages(chapterUrl, listener);
+	public ScrappedPage[] scrapPages(String chapterUrl) throws ScrapperException, IOException {
+		return scrapper.scrapPages(chapterUrl);
 	}
 	@Override
-	public String getPageImageUrl(String pageUrls) throws Exception {
+	public String[] getPageImageUrl(String pageUrls) throws ScrapperException, IOException {
 		return scrapper.getPageImageUrl(pageUrls);
 	}
 	@Override

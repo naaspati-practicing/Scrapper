@@ -1,78 +1,75 @@
 package sam.manga.scrapper.impl.mangahere;
 
-import java.net.URL;
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import sam.manga.samrock.urls.MangaUrlsUtils.MangaUrl;
-import sam.manga.scrapper.ChapterScrapListener;
+import sam.logging.MyLoggerFactory;
+import sam.manga.scrapper.FailedChapter;
+import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedManga;
+import sam.manga.scrapper.ScrapperException;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.jsoup.JsoupFactory;
-import sam.myutils.MyUtilsException;
+import sam.string.StringUtils;
 
 public class MangaHereManga implements ScrappedManga {
-	private String title, author, description, thumb, status, rank;
-	private List<String> tags;
-	private Document doc;
-	private final String manga_url;
+	private final Logger LOGGER = MyLoggerFactory.logger(getClass());
 
-	public MangaHereManga(JsoupFactory jsoupFactory, String url) throws Exception {
+	protected String title, author, description, thumb, status, rank;
+	protected List<String> tags;
+	protected final Document doc;
+	protected final String manga_urls;
+
+	public MangaHereManga(JsoupFactory jsoupFactory, String url) throws ScrapperException, IOException {
 		this.doc = jsoupFactory.getDocument(url, UrlType.MANGA);
-		this.manga_url = url;
+		this.manga_urls = url;
 	}
-
 	private boolean loaded = false;
 	private void load() {
 		if(loaded)
 			return;
-		
+
+		LOGGER.fine(() -> "meta loaded: "+manga_urls);
+
 		loaded = true;
-		
-		title = doc.getElementsByClass("title").stream().filter(e -> e.tagName().equals("h1")).findFirst().map(e -> e.text()).orElse(null);
-		thumb = Optional.of(doc.select(".manga_detail_top img.img")).filter(e -> !e.isEmpty()).map(e -> e.get(0).attr("src")).orElse(null);
-		
-		doc.getElementsByClass("detail_topText")
-		.get(0)
-		.getElementsByTag("li")
-		.forEach(e -> {
-			Elements es = e.getElementsByTag("label");
-			String key = es.isEmpty() ? null : es.get(0).text();
-			if(key == null)
-				return;
-			
-			switch (key) {
-				case "Author(s):":
-					author = e.getElementsByTag("a").first().text();
-					break;
-				case "Genre(s):":
-					tags = Arrays.asList(e.ownText().split(", "));
-					break;
-				case "Status:":
-					status = e.ownText();
-					if(status != null) {
-						int n = status.indexOf(' ');
-						if(n > 0)
-							status = status.substring(0, n);
-					}
-					break;
-				case "Rank:":
-					rank = e.ownText();
-					break;
-				default:
-					if("Summary:".equals(es.get(0).ownText()))
-						description = Optional.of(e.getElementById("show"))
-						.map(s -> s.ownText())
-						.orElse(null);
-					break;
-			}
-		});
+
+		Function<String, Elements> cls = doc::getElementsByClass;
+		BiFunction<String, String, Stream<Element>> cls2 = (classname, tagname) -> cls.apply(classname).stream().flatMap(e -> e.getElementsByTag("a").stream());
+
+		title = cls.apply("detail-info-right-title-font").get(0).text();
+		thumb = Optional.of(cls.apply("detail-info-cover-img")).filter(e -> !e.isEmpty()).map(e -> e.get(0).attr("src")).orElse(null);
+		status = Optional.of(cls.apply("detail-info-right-title-tip")).filter(e -> !e.isEmpty()).map(e -> e.get(0).text()).orElse(null);
+		author = cls2.apply("detail-info-right-say", "a")
+				.filter(e -> e.attr("href").startsWith("/search/author/"))
+				.findFirst()
+				.map(e -> e.attr("title"))
+				.orElse(null);
+
+		tags = cls2.apply("detail-info-right-tag-list", "a")
+				.filter(e -> e.attr("href").startsWith("/directory/"))
+				.map(e -> e.attr("title"))
+				.collect(Collectors.toList());
+
+		description = cls.apply("fullcontent").stream()
+				.map(p -> p.text())
+				.max(Comparator.comparingInt(String::length))
+				.orElse(null);
+
+		rank = cls.apply("item-score").get(0).text();
 	}
-	
+
 	@Override
 	public String getTitle() {
 		load();
@@ -92,6 +89,7 @@ public class MangaHereManga implements ScrappedManga {
 
 	@Override
 	public String getDescription() {
+		load();
 		return description; 
 	}
 	@Override
@@ -104,39 +102,53 @@ public class MangaHereManga implements ScrappedManga {
 		load();
 		return status;
 	}
-
-	@Override
-	public  void getChapters(ChapterScrapListener listener) {
-		String protocol = MyUtilsException.noError(() -> new URL(manga_url).getProtocol().concat(":"));
-		
-		doc.select(".detail_list ul li span.left")
-		.forEach(elm -> {
-			String url = elm.getElementsByTag("a").get(0).attr("href");
-			String title = elm.ownText();
-			int end = url.lastIndexOf('/');
-			int start = end != url.length() - 1 ? end : url.lastIndexOf('/', end - 1);
-			end = end == start ? url.length() : end;
-			start++;
-			
-			if(url.charAt(start) == 'c' || url.charAt(start) < '0' || url.charAt(start) > '9')
-				start++;
-			
-			String n = url.substring(start, end);
-			String v = "UKNONWN";
-			double number = 0 ;
-			
-			try {
-				number = Double.parseDouble(n.charAt(0) == '#' ? n.substring(1) : n);
-			} catch (NumberFormatException|NullPointerException e) {
-				listener.onChapterFailed(String.format("Bad Number[number:%s, volume:%s, url:%s ]", n,v, url), e,n,v, title, url);
-				return;
-			}
-			listener.onChapterSuccess(number, v, title, url.startsWith("//") ? protocol.concat(url) : url);
-		});
-	}
-
 	@Override
 	public String getRank() {
+		load();
 		return rank;
+	}
+	private static final Pattern volumePattern = Pattern.compile("v\\d+.+");
+
+	@Override
+	public  ScrappedChapter[] getChapters() {
+		return doc
+				.getElementById("chapterlist")
+				.getElementsByTag("li")
+				.stream()
+				.flatMap(t -> t.getElementsByTag("a").stream())
+				.map(elm -> {
+					String url = elm.absUrl("href");
+					url = url.endsWith("html") ? url : url + (url.endsWith("/") ? "1.html" : "/1.html");
+					String[] splits = StringUtils.split(url, '/');
+					Element titles = elm.getElementsByClass("title1").first();
+					String title = titles == null ? null : titles.text();
+
+					String v = null, n = null;
+					for (int i = splits.length - 1; i >= 1; i--) {
+						if(v != null && n != null)
+							break;
+						String s = splits[i];
+						if(s.isEmpty())
+							continue;
+						if(v == null && s.charAt(0) == 'v')
+							v = s.substring(1); 
+						if(n == null && s.charAt(0) == 'c')
+							n = s.substring(1);  
+					}
+
+					String volume = v != null && volumePattern.matcher(v).matches() ? v : "vUnknown"; 
+					double number = 0 ;
+					try {
+						number = Double.parseDouble(n);
+					} catch (NumberFormatException|NullPointerException e) {
+						return new FailedChapter(e, n, v, title, url);
+					}
+					return new ScrappedChapter(number, volume, title, url);
+				})
+				.toArray(ScrappedChapter[]::new);
+	}
+
+	public Document getDoc() {
+		return doc;
 	}
 }

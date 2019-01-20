@@ -1,5 +1,6 @@
 package sam.manga.scrapper;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface ScrappedManga {
@@ -10,5 +11,5 @@ public interface ScrappedManga {
 	String getThumb();
 	String getStatus();
 	String getDescription();
-	void getChapters(ChapterScrapListener listener);
+	ScrappedChapter[] getChapters() throws IOException, ScrapperException;
 }

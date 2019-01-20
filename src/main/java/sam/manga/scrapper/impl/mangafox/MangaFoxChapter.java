@@ -1,15 +1,21 @@
 package sam.manga.scrapper.impl.mangafox;
 
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
-import sam.manga.scrapper.PageScrapListener;
+import sam.logging.MyLoggerFactory;
+import sam.manga.scrapper.ScrappedPage;
 import sam.manga.scrapper.ScrapperException;
 import sam.manga.scrapper.UrlType;
+import sam.manga.scrapper.impl.mangafox.JsEngine.Result;
 import sam.manga.scrapper.jsoup.JsoupFactory;
 import sam.reference.WeakMap;
 import sam.string.StringUtils;
 
 public class MangaFoxChapter {
+	private final Logger LOGGER = MyLoggerFactory.logger(getClass());
+	
 	private final JsoupFactory jsoupFactory;
 	public MangaFoxChapter(JsoupFactory jsoupFactory) {
 		this.jsoupFactory = jsoupFactory;
@@ -17,20 +23,25 @@ public class MangaFoxChapter {
 	
 	private static final WeakMap<String, ChapInfo> chUrl_ajaxUrl = new WeakMap<>(new ConcurrentHashMap<>());
 
-	public void getPages(String chapter_url, PageScrapListener listener) throws Exception {
+	public ScrappedPage[] getPages(String chapter_url) throws ScrapperException, IOException {
 		if(!chapter_url.endsWith("/1.html"))
 			throw new IllegalArgumentException("url must end with /1.html");
 	
-		ChapInfo info = chapInfo(chapter_url, jsoupFactory, UrlType.CHAPTER);
+		ChapInfo info = chapInfo(chapter_url, jsoupFactory, UrlType.CHAPTER, LOGGER);
 		chapter_url = chapter_url.concat("#ipg");
 		
-		String[] imgurls = info.imgUrls;
+		LOGGER.fine(() -> info.toString());
 		
-		for (int j = 0; j < info.imagecount; j++) 
-			listener.onPageSuccess(chapter_url, j, chapter_url.concat(Integer.toString(j+1)), imgurls == null ? null : imgurls[j]);
+		String[] imgurls = info.imgUrls;
+		ScrappedPage[] pages = new ScrappedPage[info.imagecount];
+		
+		for (int j = 0; j < info.imagecount; j++)
+			pages[j] = new ScrappedPage(chapter_url, j, chapter_url.concat(Integer.toString(j+1)), imgurls == null ? null : imgurls[j]); 
+			
+		return pages;
 	}
 
-	static ChapInfo chapInfo(String chapter_url, JsoupFactory jsoup, UrlType owner) throws Exception {
+	static ChapInfo chapInfo(String chapter_url, JsoupFactory jsoup, UrlType owner, Logger logger) throws ScrapperException, IOException {
 		if(!chapter_url.endsWith("/1.html"))
 			throw new IllegalArgumentException("url must end with /1.html");
 
@@ -74,16 +85,18 @@ public class MangaFoxChapter {
 		if(imagecount[0] == -1)
 			throw new ScrapperException("imagecount not found");
 		
-		try(JsEngine js = JsEngine.get();) {
-			js.eval(res[1]);
-			String[] imgurls = js.imgUrls;
-			info = new ChapInfo(imagecount[0], chapterid[0], js.val, chapter_url, imgurls);
-			
-			if(imgurls != null) {
-				for (int i = 0; i < imgurls.length; i++)
-					imgurls[i] = info.appendProtocol(imgurls[i]);
-			}
+		Result result = JsEngine.parse(res[1]);
+		
+		String[] imgurls = result.imgUrls;
+		info = new ChapInfo(imagecount[0], chapterid[0], result.val, chapter_url, imgurls);
+		
+		if(imgurls != null) {
+			for (int i = 0; i < imgurls.length; i++)
+				imgurls[i] = info.appendProtocol(imgurls[i]);
 		}
+		
+		if(logger != null)
+			logger.fine(() -> String.format("chapterid: %s, imagecount: %s" , chapterid[0], imagecount[0]));
 		
 		chUrl_ajaxUrl.put(chapter_url, info);
 		return info;

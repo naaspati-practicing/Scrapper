@@ -1,18 +1,29 @@
-apply plugin: 'java'
-apply plugin: 'application'
+apply plugin: 'java-library'
 
 repositories {
     jcenter()
 }
 
-mainClassName = 'Main'
+ext.JUNIT_VERSION = '5.3.2'
  
 dependencies {
-  compile 'org.jsoup:jsoup:1.11.3'
-  compile files('myutils.jar')
+  implementation 'org.jsoup:jsoup:1.11.3'
+  implementation files('myutils.jar')
+  // implementation 'org.graalvm.js:js-scriptengine:1.0.0-rc11'
+ // implementation 'org.graalvm.truffle:truffle-api:1.0.0-rc11'
+  
+  
+  testImplementation (* wrap('org.junit.jupiter', JUNIT_VERSION, 
+     'junit-jupiter-api',
+     'junit-jupiter-params', // required for Parameterized test
+     'junit-jupiter-engine'
+   ))  
 }
 
+def wrap(group, version, String...names) { names.collect{"$group:$it:$version"} }
 
-run {
-    environment['CACHED_SCRAPPER'] = false
+test {
+  useJUnitPlatform()
+  environment['CACHED_SCRAPPER'] = false
+  systemProperty 'java.util.logging.config.file','test-logging.properties'
 }
