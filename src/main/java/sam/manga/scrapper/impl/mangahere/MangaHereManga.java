@@ -15,6 +15,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import sam.collection.ArraysUtils;
 import sam.logging.MyLoggerFactory;
 import sam.manga.scrapper.FailedChapter;
 import sam.manga.scrapper.ScrappedChapter;
@@ -111,7 +112,7 @@ public class MangaHereManga implements ScrappedManga {
 
 	@Override
 	public  ScrappedChapter[] getChapters() {
-		return doc
+		ScrappedChapter[] scs = doc
 				.getElementById("chapterlist")
 				.getElementsByTag("li")
 				.stream()
@@ -146,8 +147,9 @@ public class MangaHereManga implements ScrappedManga {
 					return new ScrappedChapter(number, volume, title, url);
 				})
 				.toArray(ScrappedChapter[]::new);
+		
+		return ArraysUtils.reverse(scs);
 	}
-
 	public Document getDoc() {
 		return doc;
 	}
