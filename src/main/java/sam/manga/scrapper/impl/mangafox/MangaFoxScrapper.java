@@ -18,6 +18,7 @@ import sam.manga.scrapper.ScrapperException;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.impl.mangafox.JsEngine.Result;
 import sam.manga.scrapper.jsoup.JsoupFactory;
+import sam.myutils.Checker;
 
 public class MangaFoxScrapper implements Scrapper {
 	protected JsoupFactory factory;
@@ -43,7 +44,7 @@ public class MangaFoxScrapper implements Scrapper {
 			throw new IllegalArgumentException("pageUrl must end with\""+END+"\", pageUrl: "+pageUrl);
 		
 		String number = pageUrl.substring(index+END.length());
-		if(!number.chars().allMatch(c -> c >= '0' && c <= '9'))
+		if(!Checker.isInteger(number) || number.charAt(0) == '-' || (number.length() == 1 && number.charAt(0) == '0'))
 			throw new IllegalArgumentException("bad page_number: "+number);
 		
 		final String chUrl = pageUrl.substring(0, pageUrl.lastIndexOf('#'));
