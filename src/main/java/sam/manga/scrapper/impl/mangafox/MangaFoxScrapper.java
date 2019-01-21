@@ -43,7 +43,7 @@ public class MangaFoxScrapper implements Scrapper {
 			throw new IllegalArgumentException("pageUrl must end with\""+END+"\", pageUrl: "+pageUrl);
 		
 		String number = pageUrl.substring(index+END.length());
-		if(!number.chars().allMatch(c -> c > '0' && c <= '9'))
+		if(!number.chars().allMatch(c -> c >= '0' && c <= '9'))
 			throw new IllegalArgumentException("bad page_number: "+number);
 		
 		final String chUrl = pageUrl.substring(0, pageUrl.lastIndexOf('#'));

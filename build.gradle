@@ -4,6 +4,7 @@ repositories {
     jcenter()
 }
 
+version = 0.22
 ext.JUNIT_VERSION = '5.3.2'
  
 dependencies {
