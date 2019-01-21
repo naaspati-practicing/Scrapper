@@ -20,27 +20,24 @@ import javax.script.SimpleBindings;
 
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import sam.manga.scrapper.ScrapperException;
-import sam.reference.WeakQueue;
 
 @SuppressWarnings("restriction")
 public class JsEngine {
-	private  static final WeakQueue<JsEngine> jsEngines = new WeakQueue<>(true, JsEngine::new);
+	private static volatile JsEngine jsengine;
 
-	public static Result parse(String script) throws ScrapperException {
-		JsEngine e = null;
-		try {
-			e = jsEngines.poll();
-			e.eval(script);
-			return  new Result(e);
-		} finally {
-			if(e != null) {
-				e.val = null;
-				e.imgUrls = null;
-				e.urls = null;
-
-				jsEngines.add(e);
+	public synchronized static Result parse(String script) throws ScrapperException {
+			if(jsengine == null)
+				jsengine = new JsEngine();
+			try {
+				jsengine.eval(script);
+				return  new Result(jsengine);
+			} finally {
+				if(jsengine != null) {
+					jsengine.val = null;
+					jsengine.imgUrls = null;
+					jsengine.urls = null;
+				}
 			}
-		}
 	}
 
 	public static class Result {
