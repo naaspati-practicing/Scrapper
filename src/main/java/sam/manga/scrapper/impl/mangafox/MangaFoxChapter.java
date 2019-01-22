@@ -1,15 +1,19 @@
 package sam.manga.scrapper.impl.mangafox;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
+import sam.collection.Pair;
 import sam.logging.MyLoggerFactory;
 import sam.manga.scrapper.ScrappedPage;
 import sam.manga.scrapper.ScrapperException;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.impl.mangafox.JsEngine.Result;
 import sam.manga.scrapper.jsoup.JsoupFactory;
+import sam.reference.ReferenceUtils;
 import sam.reference.WeakMap;
 import sam.string.StringUtils;
 
@@ -22,12 +26,13 @@ public class MangaFoxChapter {
 	}
 	
 	private static final WeakMap<String, ChapInfo> chUrl_ajaxUrl = new WeakMap<>(new ConcurrentHashMap<>());
+	private static final AtomicReference<WeakReference<Pair<String, ChapInfo>>> current = new AtomicReference<>();
 
 	public ScrappedPage[] getPages(String chapter_url) throws ScrapperException, IOException {
 		if(!chapter_url.endsWith("/1.html"))
 			throw new IllegalArgumentException("url must end with /1.html");
 	
-		ChapInfo info = chapInfo(chapter_url, jsoupFactory, UrlType.CHAPTER, LOGGER);
+		ChapInfo info = chapInfo(chapter_url, jsoupFactory, UrlType.CHAPTER, LOGGER, true);
 		chapter_url = chapter_url.concat("#ipg");
 		
 		LOGGER.fine(() -> info.toString());
@@ -41,13 +46,21 @@ public class MangaFoxChapter {
 		return pages;
 	}
 
-	static ChapInfo chapInfo(String chapter_url, JsoupFactory jsoup, UrlType owner, Logger logger) throws ScrapperException, IOException {
+	static ChapInfo chapInfo(String chapter_url, JsoupFactory jsoup, UrlType owner, Logger logger, boolean newinfo) throws ScrapperException, IOException {
 		if(!chapter_url.endsWith("/1.html"))
 			throw new IllegalArgumentException("url must end with /1.html");
 
-		ChapInfo info = chUrl_ajaxUrl.get(chapter_url);
-		if(info != null)
-			return info;
+		if(!newinfo) {
+			Pair<String, ChapInfo> pair = ReferenceUtils.get(current.get());
+			if(pair.key.equals(chapter_url))
+				return pair.value;
+			
+			ChapInfo info = chUrl_ajaxUrl.get(chapter_url);
+			if(info != null) {
+				current.set(new WeakReference<>(new Pair<>(chapter_url, info)));
+				return info;	
+			}
+		}
 
 		String[] res = {null, null};
 
@@ -88,7 +101,7 @@ public class MangaFoxChapter {
 		Result result = JsEngine.parse(res[1]);
 		
 		String[] imgurls = result.imgUrls;
-		info = new ChapInfo(imagecount[0], chapterid[0], result.val, chapter_url, imgurls);
+		ChapInfo info = new ChapInfo(imagecount[0], chapterid[0], result.val, chapter_url, imgurls);
 		
 		if(imgurls != null) {
 			for (int i = 0; i < imgurls.length; i++)
@@ -99,6 +112,7 @@ public class MangaFoxChapter {
 			logger.fine(() -> String.format("chapterid: %s, imagecount: %s" , chapterid[0], imagecount[0]));
 		
 		chUrl_ajaxUrl.put(chapter_url, info);
+		current.set(new WeakReference<>(new Pair<>(chapter_url, info)));
 		return info;
 	}
 }

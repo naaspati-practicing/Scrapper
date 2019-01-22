@@ -20,12 +20,12 @@ import sam.myutils.Checker;
 
 public class MangaFoxScrapper implements Scrapper {
 	protected JsoupFactory factory;
-	
+
 	@Override
 	public void setJsoupFactory(JsoupFactory factory) {
 		this.factory = factory;
 	}
-	
+
 	@Override
 	public ScrappedManga scrapManga(String mangaUrl) throws ScrapperException, IOException {
 		return new MangaFoxManga(factory, mangaUrl);
@@ -34,22 +34,19 @@ public class MangaFoxScrapper implements Scrapper {
 	public ScrappedPage[] scrapPages(String chapterUrl) throws ScrapperException, IOException {
 		return new MangaFoxChapter(factory).getPages(chapterUrl);
 	}
-	
+
 	@Override
 	public String[] getPageImageUrl(final String pageUrl) throws ScrapperException, IOException{
 		final int index = pageUrl.lastIndexOf(END);
 		if(index < 0 )
 			throw new IllegalArgumentException("pageUrl must end with\""+END+"\", pageUrl: "+pageUrl);
-		
+
 		String number = pageUrl.substring(index+END.length());
 		if(!Checker.isInteger(number) || number.charAt(0) == '-' || (number.length() == 1 && number.charAt(0) == '0'))
 			throw new IllegalArgumentException("bad page_number: "+number);
-		
+
 		final String chUrl = pageUrl.substring(0, pageUrl.lastIndexOf('#'));
-		ChapInfo info = MangaFoxChapter.chapInfo(chUrl, factory, UrlType.PAGE, null);
-		
-		String url = info.chapterfun_ashx.concat(number);
-		
+		/*
 		int tries = 0;
 		while(tries++ < 3) {
 			String[] s = execute(info, url, false);
@@ -61,33 +58,47 @@ public class MangaFoxScrapper implements Scrapper {
 				e.printStackTrace();
 			}
 		}
+
+		 */
+
+		String[] s = null;
+		try {
+			 s = execute(chUrl, number, false, false);
+		} catch (IOException|ScrapperException e) {}
 		
-		return execute(info, url, true);
+		if(s != null)
+			return s;
+		
+		return execute(chUrl, number, true, true);
 	}
-	private String[] execute(ChapInfo info, String url, boolean throwError) throws IOException, ScrapperException {
+	private String[] execute(String chUrl, String number, boolean newinfo, boolean throwError) throws IOException, ScrapperException {
+		ChapInfo info = MangaFoxChapter.chapInfo(chUrl, factory, UrlType.PAGE, null, newinfo);
+		String url = info.chapterfun_ashx.concat(number);
+
+
 		return factory.request(url, body -> {
 			try(InputStream is = body.byteStream();
 					InputStreamReader reader = new InputStreamReader(is, "utf-8");
 					BufferedReader breader = new BufferedReader(reader);
 					) {
 				String script = breader.lines().collect(Collectors.joining("\n"));
-				
+
 				if(Checker.isEmptyTrimmed(script)) {
 					if(throwError)
 						throw new ScrapperException("empty script: "+url);
 					else
 						return null;
 				}
-				
+
 				Result e = JsEngine.parse(script);
-				
+
 				String[] urls = e.imgUrls;
 				if(urls == null)
 					return null;
-				
+
 				for (int i = 0; i < urls.length; i++) 
 					urls[i] = info.appendProtocol(urls[i]);
-				
+
 				if(urls.length > 2)
 					throw new ScrapperException("urls.length("+urls.length+") > 2\n"+String.join("\n", urls));
 				return urls;
