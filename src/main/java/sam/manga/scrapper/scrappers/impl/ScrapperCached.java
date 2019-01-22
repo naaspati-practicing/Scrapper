@@ -32,6 +32,7 @@ import sam.manga.scrapper.ScrapperType;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.jsoup.DefaultJsoupFactory;
 import sam.manga.scrapper.jsoup.JsoupFactory;
+import sam.manga.scrapper.jsoup.ResponseConsumer;
 import sam.myutils.System2;
 
 public class ScrapperCached implements JsoupFactory, Scrapper  {
@@ -90,9 +91,13 @@ public class ScrapperCached implements JsoupFactory, Scrapper  {
 	public int getConnectionTimeout() {
 		return defaultJsoupFactory.getConnectionTimeout();
 	}
+	@Override
+	public <E> E request(String url, ResponseConsumer<E> consumer) throws IOException, ScrapperException {
+		return defaultJsoupFactory.request(url, consumer);
+	}
 	private static Charset charset = StandardCharsets.UTF_8;
 	@Override
-	public synchronized Document getDocument(String url, UrlType type) throws MalformedURLException, IOException {
+	public synchronized Document getDocument(String url, UrlType type) throws MalformedURLException, IOException, ScrapperException {
 		Objects.requireNonNull(url);
 		Objects.requireNonNull(type);
 

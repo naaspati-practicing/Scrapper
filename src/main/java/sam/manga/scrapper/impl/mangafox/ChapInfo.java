@@ -30,8 +30,8 @@ class ChapInfo {
 		if(!c.endsWith("/1.html"))
 			throw new IllegalArgumentException("url must end with /1.html");
 		// with key
-		// c = c.substring(0, c.lastIndexOf('/')).concat("/chapterfun.ashx?cid="+chapterid+(key == null || key.trim().isEmpty() ? "" : "&key="+key)+"&page=");
-		c = c.substring(0, c.lastIndexOf('/')).concat("/chapterfun.ashx?cid="+chapterid+"&key=&page=");
+		 c = c.substring(0, c.lastIndexOf('/')).concat("/chapterfun.ashx?cid="+chapterid+(key == null || key.trim().isEmpty() ? "" : "&key="+key)+"&page=");
+		//c = c.substring(0, c.lastIndexOf('/')).concat("/chapterfun.ashx?cid="+chapterid+"&key=&page=");
 		return c;
 	}
 	

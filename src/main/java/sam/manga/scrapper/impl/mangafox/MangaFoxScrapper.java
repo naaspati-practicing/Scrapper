@@ -6,10 +6,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URLConnection;
 import java.util.stream.Collectors;
 
-import sam.internetutils.InternetUtils;
 import sam.manga.samrock.urls.MangaUrlsMeta;
 import sam.manga.scrapper.ScrappedManga;
 import sam.manga.scrapper.ScrappedPage;
@@ -50,49 +48,53 @@ public class MangaFoxScrapper implements Scrapper {
 		final String chUrl = pageUrl.substring(0, pageUrl.lastIndexOf('#'));
 		ChapInfo info = MangaFoxChapter.chapInfo(chUrl, factory, UrlType.PAGE, null);
 		
-		int attept = 0;
 		String url = info.chapterfun_ashx.concat(number);
-		InputStream script = reader(url);
 		
-		while(attept++ < 10 && script == null) {
+		int tries = 0;
+		while(tries++ < 3) {
+			String[] s = execute(info, url, false);
+			if(s != null)
+				return s;
 			try {
 				Thread.sleep(1000);
-			} catch (InterruptedException e1) {
-				throw new ScrapperException(e1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
-			script = reader(url);
 		}
-		if(script == null)
-			throw new ScrapperException("failed to load img-url-script: \nurl: "+url+"\npage_url: "+pageUrl);
-			
 		
-		try(InputStream is = script;
-				InputStreamReader reader = new InputStreamReader(is, "utf-8");
-				BufferedReader breader = new BufferedReader(reader);
-				) {
-			Result e = JsEngine.parse(breader.lines().collect(Collectors.joining("\n")));
-			
-			String[] urls = e.imgUrls;
-			if(urls == null)
-				return null;
-			
-			for (int i = 0; i < urls.length; i++) 
-				urls[i] = info.appendProtocol(urls[i]);
-			
-			if(urls.length > 2)
-				throw new ScrapperException("urls.length("+urls.length+") > 2\n"+String.join("\n", urls));
-			return urls;
-		}
+		return execute(info, url, true);
+	}
+	private String[] execute(ChapInfo info, String url, boolean throwError) throws IOException, ScrapperException {
+		return factory.request(url, body -> {
+			try(InputStream is = body.byteStream();
+					InputStreamReader reader = new InputStreamReader(is, "utf-8");
+					BufferedReader breader = new BufferedReader(reader);
+					) {
+				String script = breader.lines().collect(Collectors.joining("\n"));
+				
+				if(Checker.isEmptyTrimmed(script)) {
+					if(throwError)
+						throw new ScrapperException("empty script: "+url);
+					else
+						return null;
+				}
+				
+				Result e = JsEngine.parse(script);
+				
+				String[] urls = e.imgUrls;
+				if(urls == null)
+					return null;
+				
+				for (int i = 0; i < urls.length; i++) 
+					urls[i] = info.appendProtocol(urls[i]);
+				
+				if(urls.length > 2)
+					throw new ScrapperException("urls.length("+urls.length+") > 2\n"+String.join("\n", urls));
+				return urls;
+			}	
+		});
 	}
 
-	private InputStream reader(String url) throws IOException {
-		URLConnection c = InternetUtils.connection(url);
-		c.connect();
-		if(c.getContentLength() == 0)
-			return null;
-		
-		return c.getInputStream();
-	}
 	@Override
 	public String urlColumn() {
 		return MangaUrlsMeta.MANGAFOX;

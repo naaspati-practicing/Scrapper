@@ -10,6 +10,7 @@ ext.JUNIT_VERSION = '5.3.2'
 dependencies {
   implementation 'org.jsoup:jsoup:1.11.3'
   implementation files('myutils.jar')
+  implementation 'com.squareup.okhttp3:okhttp:3.12.1'
  
   testImplementation (* wrap('org.junit.jupiter', JUNIT_VERSION, 
      'junit-jupiter-api',

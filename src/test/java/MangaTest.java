@@ -51,8 +51,6 @@ public class MangaTest {
 
 	@Test
 	void meta() throws ScrapperException, IOException {
-		assumeTrue(MangaUrlsMeta.MANGAHERE.equals(scrapper.urlColumn()));
-
 		StringBuilder sb = new StringBuilder();
 		Junk.invokeGetters(manga, sb, e -> !e.getName().equals("getChapters"));
 
@@ -74,8 +72,6 @@ public class MangaTest {
 
 	@Test
 	void chapters() throws IOException, ScrapperException {
-		assumeTrue(MangaUrlsMeta.MANGAHERE.equals(scrapper.urlColumn()));
-
 		ScrappedChapter[] chaps = manga.getChapters();
 
 		Document doc = ((MangaHereManga)manga).getDoc();

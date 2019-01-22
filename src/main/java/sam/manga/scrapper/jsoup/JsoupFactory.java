@@ -10,4 +10,5 @@ import sam.manga.scrapper.UrlType;
 public interface JsoupFactory {
 	Document getDocument(String url, UrlType owner) throws ScrapperException, IOException;
 	int getConnectionTimeout();
+	<E> E request(String url, ResponseConsumer<E> consumer) throws IOException, ScrapperException;
 }
