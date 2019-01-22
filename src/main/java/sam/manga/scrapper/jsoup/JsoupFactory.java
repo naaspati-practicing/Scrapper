@@ -2,13 +2,13 @@ package sam.manga.scrapper.jsoup;
 
 import java.io.IOException;
 
+import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
 
 import sam.manga.scrapper.ScrapperException;
-import sam.manga.scrapper.UrlType;
 
 public interface JsoupFactory {
-	Document getDocument(String url, UrlType owner) throws ScrapperException, IOException;
+	Document getDocument(String url) throws ScrapperException, IOException;
 	int getConnectionTimeout();
-	<E> E request(String url, ResponseConsumer<E> consumer) throws IOException, ScrapperException;
+	HttpConnection connection(String url);
 }

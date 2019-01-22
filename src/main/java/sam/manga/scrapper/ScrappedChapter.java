@@ -1,6 +1,8 @@
 package sam.manga.scrapper;
 
-public class ScrappedChapter {
+import java.io.IOException;
+
+public abstract class ScrappedChapter {
 
 	protected final  double number;
 	protected final   String volume;
@@ -27,6 +29,9 @@ public class ScrappedChapter {
 	}
 	@Override
 	public String toString() {
-		return "ScrappedChapter [number='" + number + "', volume='" + volume + "', title='" + (title == null ? "" : title) + "', url='" + url + "']";
+		return getClass().getSimpleName()+" [number='" + number + "', volume='" + volume + "', title='" + (title == null ? "" : title) + "', url='" + url + "']";
 	}
+	
+	public abstract String[] getPageImageUrl(String pageUrl) throws ScrapperException, IOException ;
+	public abstract ScrappedPage[] getPages() throws ScrapperException, IOException ;
 }

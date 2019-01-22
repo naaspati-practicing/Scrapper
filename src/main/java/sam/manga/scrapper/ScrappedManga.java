@@ -3,6 +3,8 @@ package sam.manga.scrapper;
 import java.io.IOException;
 import java.util.List;
 
+import sam.manga.scrapper.jsoup.JsoupFactory;
+
 public interface ScrappedManga {
 	String getRank();
 	String getTitle();
@@ -12,4 +14,5 @@ public interface ScrappedManga {
 	String getStatus();
 	String getDescription();
 	ScrappedChapter[] getChapters() throws IOException, ScrapperException;
+	JsoupFactory getJsoupFactory();
 }

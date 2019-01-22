@@ -1,7 +1,6 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -9,39 +8,37 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.jsoup.Connection.Method;
+import org.jsoup.Connection.Response;
+import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import sam.manga.samrock.urls.MangaUrlsMeta;
 import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedManga;
 import sam.manga.scrapper.ScrappedPage;
-import sam.manga.scrapper.Scrapper;
 import sam.manga.scrapper.ScrapperException;
-import sam.manga.scrapper.ScrapperType;
-import sam.manga.scrapper.impl.mangafox.JsEngine;
+import sam.manga.scrapper.ScrapperMore;
+import sam.manga.scrapper.factory.ScrapperFactory;
+import sam.manga.scrapper.impl.mangahere.JsEngine;
 import sam.manga.scrapper.impl.mangahere.MangaHereManga;
-import sam.manga.scrapper.scrappers.impl.ScrapperCached;
 import sam.myutils.Checker;
 import sam.nopkg.Junk;
 
 public class MangaTest {
 
-	static ScrapperCached scrapper;
+	static ScrapperFactory scrapperfactory;
+	static ScrapperMore scrapper;
+	static String manga_url;
 	static ScrappedManga manga;
-
-	// http://www.mangahere.cc/manga/parallel_paradise/c067/chapterfun.ashx?cid=576498&key=&page=3
-	String script_1_mangaere = "eval(function(p,a,c,k,e,d){e=function(c){return(c<a?\"\":e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)d[e(c)]=k[c]||e(c);k=[function(e){return d[e]}];e=function(){return'\\\\w+'};c=1;};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p;}('k e(){2 h=\"//a.7.b/f/3/6/4.0/c\";2 1=[\"/n.g?5=l&8=9\",\"/m.g?5=o&8=9\"];j(2 i=0;i<1.t;i++){u(i==0){1[i]=\"//a.7.b/f/3/6/4.0/c\"+1[i];q}1[i]=h+1[i]}r 1}2 d;d=e();p=s;',31,31,'|pvalue|var|manga|067|token|26739|mangahere|ttl|1548050400||cc|compressed||dm5imagefun|store|jpg|pix||for|function|b16539f06a792cbf40bc321c6e21b5c90c71ace6|g003|g002|d24ffbc545e8f9be20f236881f0c57600496117c|currentimageid|continue|return|14356281|length|if'.split('|'),0,{}))";
-
-
-	String script_1_mangafox = "eval(function(p,a,c,k,e,d){e=function(c){return(c<a?\"\":e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)d[e(c)]=k[c]||e(c);k=[function(e){return d[e]}];e=function(){return'\\\\w+'};c=1;};while(c--)if(k[c])p=p.replace(new RegExp('\\\\b'+e(c)+'\\\\b','g'),k[c]);return p;}('r e(){2 c=\"m://s.7.3/4/5/6/g.0/f\";2 1=[\"/l.9?8=n&b=a\",\"/k.9?8=j&b=a\"];t(2 i=0;i<1.o;i++){p(i==0){1[i]=\"//s.7.3/4/5/6/g.0/f\"+1[i];q}1[i]=c+1[i]}h 1}2 d;d=e();',30,30,'|pvalue|var|net|store|manga|24693|fanfox|token|jpg|1548000000|ttl|pix||dm5imagefun|compressed|067|return||3a5ded12ff12626baf6111280ea2e74cde2935b2|p001|p000|http|5db041f4cc6532140468d70006e351fae7f2459d|length|if|continue|function||for'.split('|'),0,{}))";
-
 
 	@BeforeAll 
 	static void init() throws ScrapperException, IOException {
-		scrapper = new ScrapperCached("baseurl", ScrapperType.MANGAHERE);
-		manga = scrapper.scrapManga("http://www.mangahere.cc/manga/parallel_paradise/");
+		scrapperfactory = ScrapperFactory.getInstance();
+		manga_url = "http://www.mangahere.cc/manga/parallel_paradise/";
+		scrapper = (ScrapperMore) scrapperfactory.findByUrl(manga_url);
+		manga = scrapper.scrapManga(manga_url);
 	}
 
 	@Test
@@ -52,6 +49,7 @@ public class MangaTest {
 	@Test
 	void meta() throws ScrapperException, IOException {
 		StringBuilder sb = new StringBuilder();
+		
 		Junk.invokeGetters(manga, sb, e -> !e.getName().equals("getChapters"));
 
 		System.out.println(sb);
@@ -85,16 +83,15 @@ public class MangaTest {
 
 	@Test
 	void pages() throws ScrapperException, IOException {
-		assumeTrue(MangaUrlsMeta.MANGAHERE.equals(scrapper.urlColumn()));
-
 		String[] urls = {
+				"http://www.mangahere.cc/manga/gunota_ga_mahou_sekai_ni_tensei_shitara_gendai_heiki_de_guntai_harem_o_tsukucchaimashita/c025/1.html",
 				"http://www.mangahere.cc/manga/parallel_paradise/c067/1.html",
 				"http://www.mangahere.cc/manga/solo_leveling/c054/1.html"
 		};
 
 		StringBuilder sb = new StringBuilder();
 		for (String s : urls) {
-			ScrappedPage[] pages = scrapper.scrapPages(s);
+			ScrappedPage[] pages = scrapper.getPages(s);
 
 			sb.append(s).append('\n');
 
@@ -102,6 +99,7 @@ public class MangaTest {
 				sb.append(p).append('\n');
 
 			sb.append('\n');
+			break;
 		}
 
 		System.out.println(sb);
@@ -109,7 +107,8 @@ public class MangaTest {
 
 	@Test
 	void setImgUrlTest() throws ScrapperException, IOException {
-		ScrappedPage[] ss = scrapper.scrapPages("http://www.mangahere.cc/manga/parallel_paradise/c067/1.html");
+		String churl = "http://www.mangahere.cc/manga/parallel_paradise/c067/1.html";
+		ScrappedPage[] ss = scrapper.getPages(churl);
 
 		StringBuilder sb = new StringBuilder();
 		List<TempPage> pages = Arrays.stream(ss).map(TempPage::new).collect(Collectors.toList());
@@ -118,11 +117,11 @@ public class MangaTest {
 		for (int i = 0; i < pages.size(); i++) {
 			TempPage s = pages.get(i);
 			sb.append(s).append("\n  ");
-			
+
 			if(s.getImgUrl() == null) {
 				loop++;
 				try {
-					setImageUrl(scrapper, i, pages);
+					setImageUrl(scrapper,churl, i, pages);
 				} catch (Exception e) {
 					sb.append(e);
 					continue;
@@ -143,7 +142,7 @@ public class MangaTest {
 		StringBuilder sb = new StringBuilder();
 
 		for (String s : ss) {
-			String[] st = scrapper.getPageImageUrl(s);
+			String[] st = scrapper.getPageImageUrl("http://www.mangahere.cc/manga/parallel_paradise/c067/1.html", s);
 			sb.append(s).append('\n');
 			for (String p : st) 
 				sb.append(p).append('\n');
@@ -188,23 +187,48 @@ public class MangaTest {
 		}
 	}
 
-	private void setImageUrl(Scrapper scrapper, int index, List<TempPage> pages) throws ScrapperException, IOException {
+	private void setImageUrl(ScrapperMore scrapper, String churl,  int index, List<TempPage> pages) throws ScrapperException, IOException {
 		TempPage page = pages.get(index);
 
-		String[] st = scrapper.getPageImageUrl(page.getPageUrl());
+		String[] st = scrapper.getPageImageUrl(churl, page.getPageUrl());
 		if(Checker.isEmpty(st))
 			return;
-		
+
 		int order = page.getOrder();
 		for (String s : st) {
 			int n = index++;
 			int o = order++;
-			
+
 			if(n >= pages.size())
 				return;
-			
+
 			if(pages.get(n).getOrder() == o)
 				pages.get(n).setImgUrl(s);
 		}
+	}
+	
+
+	@Test
+	void noname() throws IOException {
+		String url = "http://www.mangahere.cc/manga/gunota_ga_mahou_sekai_ni_tensei_shitara_gendai_heiki_de_guntai_harem_o_tsukucchaimashita/c025/1.html";
+		HttpConnection con = (HttpConnection) HttpConnection.connect(url);
+		
+		Response rs = con
+				.method(Method.GET)
+				.execute();
+		
+		StringBuilder sb = new StringBuilder();
+		Junk.append(rs.headers(), sb);
+		
+		sb.append('\n');
+		
+		rs.parse()
+		.getElementsByTag("script")
+		.stream()
+		.map(e -> e.html())
+		.filter(Checker::isNotEmptyTrimmed)
+		.forEach(e -> sb.append(e).append('\n'));
+		
+		System.out.println(sb);
 	}
 }

@@ -1,7 +1,6 @@
-package sam.manga.scrapper.impl.mangafox;
+package sam.manga.scrapper.impl.mangahere;
 
 import static javax.script.ScriptContext.ENGINE_SCOPE;
-import static javax.script.ScriptContext.GLOBAL_SCOPE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +20,6 @@ import javax.script.SimpleBindings;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import sam.manga.scrapper.ScrapperException;
 
-@SuppressWarnings("restriction")
 public class JsEngine {
 	private static volatile JsEngine jsengine;
 
@@ -58,28 +56,24 @@ public class JsEngine {
 
 	private final ScriptEngine js = new ScriptEngineManager().getEngineByExtension("js");
 	final Bindings engine = js.getBindings(ENGINE_SCOPE);
-	final Bindings global = js.getBindings(GLOBAL_SCOPE);
 	final Set<String> existing;
 
 	@SuppressWarnings("rawtypes")
-	private JsEngine() {
+	public JsEngine() {
 		Bindings val_bind = new SimpleBindings();
 		val_bind.put("val", (Consumer)(this::setVal));
 
 		Function func = s -> val_bind;
 
 		engine.put("$", func);
-		global.put("$", func);
 
 		existing = new HashSet<>();
 		existing.addAll(engine.keySet());
-		existing.addAll(global.keySet());
 	}
 
-	public void eval(String script) throws ScrapperException {
+	public Bindings eval(String script) throws ScrapperException {
 		try {
 			clear(engine);
-			clear(global);
 
 			js.eval("var sam_evaled = "+script+";");
 
@@ -97,17 +91,14 @@ public class JsEngine {
 						.map(s -> map(s, String[].class))
 						.orElse(null);  // set by mangahere
 			}
+			
+			return engine;
 		} catch (ScriptException e) {
 			throw new ScrapperException(script, e);
 		}
 	}
 	private Optional<Object> get(String key) {
 		Object s = engine.get(key);
-
-		if(s != null)
-			return Optional.of(s);
-
-		s = global.get(key);
 
 		if(s != null)
 			return Optional.of(s);

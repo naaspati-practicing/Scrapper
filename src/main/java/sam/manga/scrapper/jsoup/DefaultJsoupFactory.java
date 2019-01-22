@@ -1,37 +1,21 @@
 package sam.manga.scrapper.jsoup;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
-import org.jsoup.Jsoup;
+import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
 
-import okhttp3.ConnectionPool;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import sam.manga.scrapper.ScrapperException;
-import sam.manga.scrapper.UrlType;
+import sam.internetutils.ConnectionConfig;
 import sam.myutils.System2;
 
 public class DefaultJsoupFactory implements JsoupFactory {
-	private final OkHttpClient client;
+	public DefaultJsoupFactory() { }
 	
-	public DefaultJsoupFactory() {
-		client = new OkHttpClient.Builder()
-				.connectTimeout(getConnectionTimeout(), TimeUnit.MILLISECONDS)
-				.connectionPool(new ConnectionPool(5, 2, TimeUnit.SECONDS))
-				.followRedirects(true)
-				.followSslRedirects(true)
-				.retryOnConnectionFailure(true)
-				.build();
-	}
-
 	@Override
-	public Document getDocument(String url, UrlType type) throws IOException, ScrapperException {
-		return request(url, body -> Jsoup.parse(body.byteStream(), body.contentType().charset().toString(), url));
+	public Document getDocument(String url) throws MalformedURLException, IOException {
+		return connection(url).get();
 	}
 
 	private int connectionTimeout = Optional.ofNullable(System2.lookupAny("scrapper.connectionTimeout", "scrapper.connection_timeout", "SCRAPPER_CONNECTION_TIMEOUT")).map(Integer::parseInt).orElse(5_000);
@@ -44,15 +28,9 @@ public class DefaultJsoupFactory implements JsoupFactory {
 		this.connectionTimeout = connectionTimeout;
 	}
 	@Override
-	public <E> E request(String url, ResponseConsumer<E> consumer) throws IOException, ScrapperException {
-		Request r = new Request.Builder()
-				.url(url)
-				.header("Cookie", "isAdult=1")
-				.build();
-		
-		try(Response rs = client.newCall(r).execute();
-				ResponseBody body = rs.body();) {
-			return consumer.consume(body);
-		}
+	public HttpConnection connection(String url) {
+		return (HttpConnection) HttpConnection.connect(url)
+		.cookie("isAdult", "1")
+		.header("User-Agent", ConnectionConfig.DEFAULT_USER_AGENT);
 	}
 }

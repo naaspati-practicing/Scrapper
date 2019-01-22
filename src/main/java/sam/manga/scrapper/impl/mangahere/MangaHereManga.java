@@ -21,7 +21,6 @@ import sam.manga.scrapper.FailedChapter;
 import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedManga;
 import sam.manga.scrapper.ScrapperException;
-import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.jsoup.JsoupFactory;
 import sam.string.StringUtils;
 
@@ -32,10 +31,16 @@ public class MangaHereManga implements ScrappedManga {
 	protected List<String> tags;
 	protected final Document doc;
 	protected final String manga_urls;
+	protected final JsoupFactory jsoupFactory;
 
 	public MangaHereManga(JsoupFactory jsoupFactory, String url) throws ScrapperException, IOException {
-		this.doc = jsoupFactory.getDocument(url, UrlType.MANGA);
+		this.jsoupFactory = jsoupFactory;
+		this.doc = jsoupFactory.getDocument(url);
 		this.manga_urls = url;
+	}
+	@Override
+	public JsoupFactory getJsoupFactory() {
+		return jsoupFactory;
 	}
 	private boolean loaded = false;
 	private void load() {
@@ -111,7 +116,7 @@ public class MangaHereManga implements ScrappedManga {
 	private static final Pattern volumePattern = Pattern.compile("v\\d+.+");
 
 	@Override
-	public  ScrappedChapter[] getChapters() {
+	public  ScrappedChapter[] getChapters() throws ScrapperException, IOException  {
 		ScrappedChapter[] scs = doc
 				.getElementById("chapterlist")
 				.getElementsByTag("li")
@@ -144,12 +149,17 @@ public class MangaHereManga implements ScrappedManga {
 					} catch (NumberFormatException|NullPointerException e) {
 						return new FailedChapter(e, n, v, title, url);
 					}
-					return new ScrappedChapter(number, volume, title, url);
+					return newInstance(number, volume, title, url);
 				})
 				.toArray(ScrappedChapter[]::new);
 		
 		return ArraysUtils.reverse(scs);
 	}
+	
+	protected ScrappedChapter newInstance(double number, String volume, String title, String url) {
+		return new MangaHereChapter(this::getJsoupFactory, number, volume, title, url);
+	}
+
 	public Document getDoc() {
 		return doc;
 	}

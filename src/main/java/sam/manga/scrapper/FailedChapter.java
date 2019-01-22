@@ -1,5 +1,7 @@
 package sam.manga.scrapper;
 
+import java.io.IOException;
+
 import sam.myutils.MyUtilsException;
 
 public class FailedChapter extends ScrappedChapter {
@@ -13,10 +15,7 @@ public class FailedChapter extends ScrappedChapter {
 		this._number = number;
 	}
 	
-	@Override
-	public double getNumber() {
-		throw new IllegalStateException("failed chapter");
-	}
+	
 	
 	public String getNumberString() {
 		return _number;
@@ -29,5 +28,21 @@ public class FailedChapter extends ScrappedChapter {
 	public String toString() {
 		return "FailedChapter [number='" + _number + "', volume='" + volume + "', title='"
 				+ (title == null ? "" : title) + "', url='" + url +"', exception='" + MyUtilsException.exceptionToString(exception) + "']";
+	}
+
+	private <E> E failed() {
+		throw new IllegalStateException("failed chapter");
+	}
+	@Override
+	public double getNumber() {
+		return failed();
+	}
+	@Override
+	public ScrappedPage[] getPages() throws ScrapperException, IOException {
+		return failed();
+	}
+	@Override
+	public String[] getPageImageUrl(String pageUrl) throws ScrapperException, IOException {
+		return failed();
 	}
 }

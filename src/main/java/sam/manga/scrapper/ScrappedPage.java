@@ -4,7 +4,7 @@ public class ScrappedPage {
 	protected final  String chapterUrl;
 	protected final  int order;
 	protected final  String pageUrl;
-	protected final  String imgUrl;
+	protected final String imgUrl;
 	
 	public ScrappedPage(String chapterUrl, int order, String pageUrl, String imgUrl) {
 		this.chapterUrl = chapterUrl;
@@ -24,6 +24,7 @@ public class ScrappedPage {
 	public String getImgUrl() {
 		return imgUrl;
 	}
+	
 	@Override
 	public String toString() {
 		return "ScrappedPage [chapterUrl='" + chapterUrl + "', order=" + order + ", pageUrl='" + (pageUrl == null ? "" : pageUrl) + "', imgUrl='"

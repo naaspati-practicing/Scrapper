@@ -19,6 +19,7 @@ import java.util.function.BiPredicate;
 import java.util.logging.Logger;
 
 import org.jsoup.Jsoup;
+import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
 
 import sam.console.ANSI;
@@ -32,7 +33,6 @@ import sam.manga.scrapper.ScrapperType;
 import sam.manga.scrapper.UrlType;
 import sam.manga.scrapper.jsoup.DefaultJsoupFactory;
 import sam.manga.scrapper.jsoup.JsoupFactory;
-import sam.manga.scrapper.jsoup.ResponseConsumer;
 import sam.myutils.System2;
 
 public class ScrapperCached implements JsoupFactory, Scrapper  {
@@ -92,8 +92,8 @@ public class ScrapperCached implements JsoupFactory, Scrapper  {
 		return defaultJsoupFactory.getConnectionTimeout();
 	}
 	@Override
-	public <E> E request(String url, ResponseConsumer<E> consumer) throws IOException, ScrapperException {
-		return defaultJsoupFactory.request(url, consumer);
+	public HttpConnection connection(String url) {
+		return defaultJsoupFactory.connection(url);
 	}
 	private static Charset charset = StandardCharsets.UTF_8;
 	@Override
