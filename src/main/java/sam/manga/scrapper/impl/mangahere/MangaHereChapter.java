@@ -10,16 +10,16 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.jsoup.Connection.Method;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.helper.HttpConnection.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sam.collection.Pair;
 import sam.internetutils.ConnectionConfig;
-import sam.logging.MyLoggerFactory;
 import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedPage;
 import sam.manga.scrapper.ScrapperException;
@@ -32,7 +32,8 @@ import sam.reference.WeakMap;
 import sam.string.StringUtils;
 
 public class MangaHereChapter extends ScrappedChapter {
-	private final Logger LOGGER = MyLoggerFactory.logger(getClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(MangaHereChapter.class);
+
 	private static final WeakMap<String, ChapInfo> chUrl_ajaxUrl = new WeakMap<>(new ConcurrentHashMap<>());
 	private static final AtomicReference<WeakReference<Pair<String, ChapInfo>>> current = new AtomicReference<>();
 	
@@ -58,7 +59,7 @@ public class MangaHereChapter extends ScrappedChapter {
 		ChapInfo info = chapInfo(chapter_url, jsop, LOGGER, true);
 		chapter_url = chapter_url.concat("#ipg");
 
-		LOGGER.fine(() -> info.toString());
+		LOGGER.debug("{}", info);
 
 		String[] imgurls = info.imgUrls;
 		ScrappedPage[] pages = new ScrappedPage[info.imagecount];
@@ -217,7 +218,7 @@ public class MangaHereChapter extends ScrappedChapter {
 		}
 
 		if(logger != null)
-			logger.fine(() -> String.format("chapterid: %s, imagecount: %s" , chapterid[0], imagecount[0]));
+			logger.debug("chapterid: {}, imagecount: {}" , chapterid[0], imagecount[0]);
 
 		chUrl_ajaxUrl.put(chapter_url, info);
 		current.set(new WeakReference<>(new Pair<>(chapter_url, info)));

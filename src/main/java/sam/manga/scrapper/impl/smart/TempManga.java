@@ -1,51 +1,25 @@
 package sam.manga.scrapper.impl.smart;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import org.jsoup.select.Elements;
 
+import sam.manga.samrock.urls.MangaUrlsMeta;
+import sam.manga.samrock.urls.nnew.MangaUrlsUtils;
 import sam.manga.scrapper.FailedChapter;
 import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrapperException;
 import sam.manga.scrapper.impl.mangahere.MangaHereManga;
 import sam.manga.scrapper.jsoup.JsoupFactory;
-import sam.myutils.Checker;
-import sam.myutils.System2;
 
+@SuppressWarnings("unchecked")
 public class TempManga extends MangaHereManga {
-	
 	private static final Map<String, String> replace;
 	static {
-		replace = Optional.ofNullable(System2.lookup("replace_urls"))
-				.map(String::trim)
-				.filter(Checker::isNotEmpty)
-				.map(Paths::get)
-				.filter(Files::exists)
-				.map(path -> {
-					Map<String, String> map = new HashMap<>();
-					
-					try {
-						Files.lines(path)
-								.forEach(s -> {
-									int n = s.indexOf('\t');
-									if(n < 0)
-										return;
-									map.put(s.substring(0, n).trim(), s.substring(n+1).trim());
-								});
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					return map;
-				})
-				.filter(map -> !map.isEmpty())
-				.map(Collections::unmodifiableMap)
-				.orElse(Collections.emptyMap());
+		replace = (Map<String, String>) Optional.ofNullable(System.getProperties().get(MangaUrlsMeta.MANGAKAKALOT)).orElse(Collections.emptyMap());
 	}
 
 	public TempManga(JsoupFactory jsoupFactory, String url) throws ScrapperException, IOException {
@@ -54,14 +28,20 @@ public class TempManga extends MangaHereManga {
 	@Override
 	public ScrappedChapter[] getChapters() throws ScrapperException, IOException  {
 		// "https://mangakakalot.com/"
-		String url2 = replace.get(manga_urls);
-		
+		String url2 = replace.get(MangaUrlsUtils.name(manga_urls));
+
+		if(url2 == null)
+			url2 = replace.get(manga_urls);
+
 		if(url2 == null)
 			url2 = manga_urls.replace("http://www.mangahere.cc/", "https://manganelo.com/");
+		
 		Elements els = jsoupFactory.getDocument(url2)
 				.getElementsByClass("chapter-list");
 		if(els.isEmpty())
-			return new ScrappedChapter[0];
+			return new MangaHereManga(getJsoupFactory(), manga_urls).getChapters();
+
+		System.out.println(url2);
 
 		return els.get(0)
 				.getElementsByTag("a")

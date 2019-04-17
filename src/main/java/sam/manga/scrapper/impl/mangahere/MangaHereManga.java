@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -14,9 +13,10 @@ import java.util.stream.Stream;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sam.collection.ArraysUtils;
-import sam.logging.MyLoggerFactory;
 import sam.manga.scrapper.FailedChapter;
 import sam.manga.scrapper.ScrappedChapter;
 import sam.manga.scrapper.ScrappedManga;
@@ -25,7 +25,7 @@ import sam.manga.scrapper.jsoup.JsoupFactory;
 import sam.string.StringUtils;
 
 public class MangaHereManga implements ScrappedManga {
-	private final Logger LOGGER = MyLoggerFactory.logger(getClass());
+	private static final Logger LOGGER = LoggerFactory.getLogger(MangaHereManga.class);
 
 	protected String title, author, description, thumb, status, rank;
 	protected List<String> tags;
@@ -47,7 +47,7 @@ public class MangaHereManga implements ScrappedManga {
 		if(loaded)
 			return;
 
-		LOGGER.fine(() -> "meta loaded: "+manga_urls);
+		LOGGER.debug("meta loaded: {}", manga_urls);
 
 		loaded = true;
 

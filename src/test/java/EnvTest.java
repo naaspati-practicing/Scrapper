@@ -1,17 +1,18 @@
 import java.io.UnsupportedEncodingException;
-import java.util.logging.Logger;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import sam.logging.MyLoggerFactory;
 import sam.nopkg.Junk;
 
 public class EnvTest {
-	private static final Logger LOGGER = MyLoggerFactory.logger(EnvTest.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(EnvTest.class);
+
 
 	@Test
 	void main_test() throws UnsupportedEncodingException {
-		LOGGER.config("\n"+Junk.systemInfo()+"\n");
+		LOGGER.info("\n{}\n", Junk.systemInfo());
 	}
 
 }

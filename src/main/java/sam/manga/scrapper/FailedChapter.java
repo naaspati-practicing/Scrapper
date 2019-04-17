@@ -27,7 +27,7 @@ public class FailedChapter extends ScrappedChapter {
 	@Override
 	public String toString() {
 		return "FailedChapter [number='" + _number + "', volume='" + volume + "', title='"
-				+ (title == null ? "" : title) + "', url='" + url +"', exception='" + MyUtilsException.exceptionToString(exception) + "']";
+				+ (title == null ? "" : title) + "', url='" + url +"', exception='" + MyUtilsException.toString(exception) + "']";
 	}
 
 	private <E> E failed() {
